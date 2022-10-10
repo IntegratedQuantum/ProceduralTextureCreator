@@ -1,0 +1,1 @@
+pub var mouseSensitivity: f32 = 1;
