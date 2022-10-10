@@ -78,8 +78,36 @@ float snoise(vec3 v){
 					              dot(p2,x2), dot(p3,x3) ) );
 }
 
+bool brickPattern[256] = bool[256](
+	 true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,
+	false, false,  true, false, false, false, false, false, false, false,  true, false, false, false, false, false,
+	false, false,  true, false, false, false, false, false, false, false,  true, false, false, false, false, false,
+	false, false,  true, false, false, false, false, false, false, false,  true, false, false, false, false, false,
+	 true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,
+	false, false, false, false, false, false,  true, false, false, false, false, false, false, false, false,  true,
+	false, false, false, false, false, false,  true, false, false, false, false, false, false, false, false,  true,
+	false, false, false, false, false, false,  true, false, false, false, false, false, false, false, false,  true,
+	 true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,
+	false, false, false,  true, false, false, false, false, false, false, false,  true, false, false, false, false,
+	false, false, false,  true, false, false, false, false, false, false, false,  true, false, false, false, false,
+	false, false, false,  true, false, false, false, false, false, false, false,  true, false, false, false, false,
+	 true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,
+	 true, false, false, false, false, false, false,  true, false, false, false, false, false, false, false, false,
+	 true, false, false, false, false, false, false,  true, false, false, false, false, false, false, false, false,
+	 true, false, false, false, false, false, false,  true, false, false, false, false, false, false, false, false
+);
+
+int getIndex(ivec2 texturePosition) {
+	return texturePosition.x + texturePosition.y*16;
+}
+
 void main() {
-	ivec2 pixelPosition = ivec2(floor(position*128));
-	float paletteID = snoise(vec3(pixelPosition + 0.5, 0)/16);
-	frag_color = color[int(paletteID*8 + 8)];
+	ivec2 pixelPosition = ivec2(floor(position*32));
+	int textureIndex = getIndex(pixelPosition & 15);
+	float paletteID = snoise(vec3(pixelPosition + 0.5, 0)/4);
+	int paletteIndex = int(paletteID*3 + 4);
+	if(brickPattern[textureIndex]) {
+		paletteIndex += 8;
+	}
+	frag_color = color[paletteIndex];
 }

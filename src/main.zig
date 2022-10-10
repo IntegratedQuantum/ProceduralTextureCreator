@@ -58,8 +58,8 @@ pub const camera = struct {
 
 pub const Window = struct {
 	var isFullscreen: bool = false;
-	pub var width: u31 = 1280;
-	pub var height: u31 = 720;
+	pub var width: u31 = 1000;
+	pub var height: u31 = 1000;
 	var window: *c.GLFWwindow = undefined;
 	pub var grabbed: bool = false;
 	const GLFWCallbacks = struct {
@@ -244,21 +244,22 @@ pub fn main() !void {
 		shader.bind();
 		var colors: [16*4]f32 = [_]f32 {
 			1, 1, 0, 1,
-			0.9, 0.9, 0.1, 1,
 			0.8, 0.9, 0.1, 1,
-			0.7, 0.8, 0.2, 1,
 			0.6, 0.8, 0.3, 1,
-			0.5, 0.7, 0.3, 1,
 			0.45, 0.6, 0.35, 1,
-			0.4, 0.6, 0.3, 1,
 			0.4, 0.5, 0.3, 1,
-			0.3, 0.5, 0.3, 1,
 			0.3, 0.5, 0.2, 1,
-			0.3, 0.4, 0.1, 1,
 			0.2, 0.4, 0.1, 1,
-			0.1, 0.3, 0.1, 1,
 			0.05, 0.15, 0.05, 1,
-			0, 0, 0, 1,
+
+			0, 1, 0.0, 1,
+			0.1, 0.0, 0.8, 1,
+			0.3, 0.0, 0.6, 1,
+			0.35, 0.0, 0.45, 1,
+			0.3, 0.0, 0.4, 1,
+			0.2, 0.0, 0.3, 1,
+			0.1, 0.0, 0.2, 1,
+			0.05, 0.0, 0.05, 1,
 		};
 		c.glUniform4fv(uniforms.color, 16, &colors);
 		c.glBindVertexArray(graphics.Draw.circleVAO);
