@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const graphics = @import("graphics.zig");
+const mesh = @import("mesh.zig");
 const settings = @import("settings.zig");
 const vec = @import("vec.zig");
 
@@ -33,7 +34,10 @@ pub var keyboard: struct {
 	fullscreen: Key = Key{.key = c.GLFW_KEY_F11, .releaseAction = &Window.toggleFullscreen},
 } = .{};
 
+
+
 pub const camera = struct {
+	pub var pos: Vec3f = Vec3f{.x=0, .y=0, .z=0};
 	pub var rotation: Vec3f = Vec3f{.x=0, .y=0, .z=0};
 	pub var direction: Vec3f = Vec3f{.x=0, .y=0, .z=0};
 	pub var viewMatrix: Mat4f = Mat4f.identity();
@@ -52,14 +56,50 @@ pub const camera = struct {
 	}
 
 	pub fn updateViewMatrix() void {
-		viewMatrix = Mat4f.rotationX(rotation.x).mul(Mat4f.rotationY(rotation.y));
+		viewMatrix = Mat4f.rotationX(rotation.x).mul(Mat4f.rotationY(rotation.y)).mul(Mat4f.translation(.{.x=-pos.x, .y=-pos.y, .z=-pos.z}));
+	}
+	pub var projectionMatrix: Mat4f = Mat4f.identity();
+
+	pub fn update(deltaTime: f32) !void {
+		var movement = Vec3f{.x=0, .y=0, .z=0};
+		var forward = Vec3f.rotateY(Vec3f{.x=0, .y=0, .z=-1}, -camera.rotation.y);
+		var right = Vec3f{.x=forward.z, .y=0, .z=-forward.x};
+		if(keyboard.forward.pressed) {
+			if(keyboard.sprint.pressed) {
+				movement.addEqual(forward.mulScalar(8));
+			} else {
+				movement.addEqual(forward.mulScalar(4));
+			}
+		}
+		if(keyboard.backward.pressed) {
+			movement.addEqual(forward.mulScalar(-4));
+		}
+		if(keyboard.left.pressed) {
+			movement.addEqual(right.mulScalar(4));
+		}
+		if(keyboard.right.pressed) {
+			movement.addEqual(right.mulScalar(-4));
+		}
+		if(keyboard.jump.pressed) {
+			movement.y = 5.45;
+		}
+		if(keyboard.fall.pressed) {
+			movement.y = -5.45;
+		}
+
+		camera.pos.addEqual(movement.mulScalar(deltaTime));
+		updateViewMatrix();
 	}
 };
 
+const fov: f32 = 90;
+const zNear: f32 = 0.1;
+const zFar: f32 = 1000;
+
 pub const Window = struct {
 	var isFullscreen: bool = false;
-	pub var width: u31 = 1000;
-	pub var height: u31 = 1000;
+	pub var width: u31 = 1280;
+	pub var height: u31 = 720;
 	var window: *c.GLFWwindow = undefined;
 	pub var grabbed: bool = false;
 	const GLFWCallbacks = struct {
@@ -94,6 +134,7 @@ pub const Window = struct {
 			width = @intCast(u31, newWidth);
 			height = @intCast(u31, newHeight);
 			c.glViewport(0, 0, width, height);
+			camera.projectionMatrix = Mat4f.perspective(std.math.degreesToRadians(f32, fov), @intToFloat(f32, width)/@intToFloat(f32, height), zNear, zFar);
 		}
 		// Mouse deltas are averaged over multiple frames using a circular buffer:
 		const deltasLen: u2 = 3;
@@ -217,19 +258,33 @@ pub fn main() !void {
 	graphics.init();
 	defer graphics.deinit();
 
-	// Window.setMouseGrabbed(true);
+	try mesh.meshing.init();
+	defer mesh.meshing.deinit();
+
+	Window.setMouseGrabbed(true);
 
 	c.glCullFace(c.GL_BACK);
 	c.glEnable(c.GL_BLEND);
 	c.glBlendFunc(c.GL_SRC_ALPHA, c.GL_ONE_MINUS_SRC_ALPHA);
-	c.glDisable(c.GL_DEPTH_TEST);
+	c.glEnable(c.GL_DEPTH_TEST);
+	c.glEnable(c.GL_CULL_FACE);
 	Window.GLFWCallbacks.framebufferSize(null, Window.width, Window.height);
 
-	var shader = try graphics.Shader.create("assets/cubyz/shaders/texture_vertex.glsl", "assets/cubyz/shaders/texture_fragment.glsl");
-	var uniforms: struct {
-		color: c_int,
-	} = undefined;
-	uniforms = shader.bulkGetUniformLocation(@TypeOf(uniforms));
+	var chunk: mesh.Chunk = undefined;
+	chunk.init();
+	chunk.addBlock(1, 1, 1);
+	chunk.addBlock(1, 1, 15);
+	chunk.addBlock(1, 15, 1);
+	chunk.addBlock(1, 15, 15);
+	chunk.addBlock(15, 1, 1);
+	chunk.addBlock(15, 1, 15);
+	chunk.addBlock(15, 15, 1);
+	chunk.addBlock(15, 15, 15);
+
+	var _mesh: mesh.meshing.ChunkMesh = mesh.meshing.ChunkMesh.init(threadAllocator);
+	defer _mesh.deinit();
+	try _mesh.regenerateMainMesh(&chunk);
+	try _mesh.uploadDataAndFinishNeighbors();
 
 	while(c.glfwWindowShouldClose(Window.window) == 0) {
 		{ // Check opengl errors:
@@ -238,10 +293,13 @@ pub fn main() !void {
 				std.log.err("Got opengl error: {}", .{err});
 			}
 		}
+		try camera.update(1.0/60.0);
 		c.glfwSwapBuffers(Window.window);
 		c.glfwPollEvents();
 
-		shader.bind();
+		c.glClear(c.GL_COLOR_BUFFER_BIT | c.GL_DEPTH_BUFFER_BIT);
+
+		mesh.meshing.bindShaderAndUniforms(camera.projectionMatrix);
 		var colors: [16*4]f32 = [_]f32 {
 			1, 1, 0, 1,
 			0.8, 0.9, 0.1, 1,
@@ -261,8 +319,7 @@ pub fn main() !void {
 			0.1, 0.0, 0.2, 1,
 			0.05, 0.0, 0.05, 1,
 		};
-		c.glUniform4fv(uniforms.color, 16, &colors);
-		c.glBindVertexArray(graphics.Draw.circleVAO);
-		c.glDrawArrays(c.GL_TRIANGLE_STRIP, 0, 4);
+		c.glUniform4fv(mesh.meshing.uniforms.color, 16, &colors);
+		_mesh.render();
 	}
 }

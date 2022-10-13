@@ -40,7 +40,7 @@ pub fn build(b: *std.build.Builder) void {
 	exe.addCSourceFiles(&[_][]const u8{"lib/glad.c", "lib/stb_image.c"}, &[_][]const u8{"-gdwarf-4"});
 	exe.setTarget(target);
 	exe.setBuildMode(mode);
-	//exe.sanitize_thread = true;
+	exe.single_threaded = true;
 	exe.install();
 
 	const run_cmd = exe.run();
