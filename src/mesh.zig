@@ -101,6 +101,7 @@ pub const meshing = struct {
 	var shader: Shader = undefined;
 	pub var uniforms: struct {
 		projectionMatrix: c_int,
+		patterns: c_int,
 		viewMatrix: c_int,
 		color: c_int,
 	} = undefined;

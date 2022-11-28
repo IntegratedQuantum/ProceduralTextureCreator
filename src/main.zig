@@ -270,9 +270,39 @@ pub fn main() !void {
 	c.glEnable(c.GL_CULL_FACE);
 	Window.GLFWCallbacks.framebufferSize(null, Window.width, Window.height);
 
+	var textureArray = graphics.TextureArray.init();
+	var patterns = [_]graphics.Image {
+		try graphics.Image.readFromFile(threadAllocator, "assets/cubyz/patterns/brick2.png"),
+	};
+	try textureArray.generate(&patterns);
+	defer textureArray.deinit();
+
 	var chunk: mesh.Chunk = undefined;
 	chunk.init();
-	chunk.addBlock(1, 1, 1);
+	for([_]u0{0} ** 16) |_, x| {
+		for([_]u0{0} ** 16) |_, y| {
+			for([_]u0{0} ** 16) |_, z| {
+				if(x >= y) {
+					chunk.addBlock(@intCast(u5, x), @intCast(u5, y), @intCast(u5, z));
+				}
+			}
+		}
+	}
+	chunk.addBlock(0, 0, 0);
+	chunk.addBlock(0, 0, 1);
+	chunk.addBlock(0, 1, 0);
+	chunk.addBlock(0, 1, 1);
+	chunk.addBlock(1, 0, 0);
+	chunk.addBlock(1, 0, 1);
+	chunk.addBlock(1, 1, 0);
+	chunk.addBlock(7, 7, 7);
+	chunk.addBlock(7, 7, 8);
+	chunk.addBlock(7, 8, 7);
+	chunk.addBlock(7, 8, 8);
+	chunk.addBlock(8, 7, 7);
+	chunk.addBlock(8, 7, 8);
+	chunk.addBlock(8, 8, 7);
+	chunk.addBlock(8, 8, 8);
 	chunk.addBlock(1, 1, 15);
 	chunk.addBlock(1, 15, 1);
 	chunk.addBlock(1, 15, 15);
@@ -300,6 +330,10 @@ pub fn main() !void {
 		c.glClear(c.GL_COLOR_BUFFER_BIT | c.GL_DEPTH_BUFFER_BIT);
 
 		mesh.meshing.bindShaderAndUniforms(camera.projectionMatrix);
+		
+		c.glActiveTexture(c.GL_TEXTURE0);
+		textureArray.bind();
+		c.glUniform1i(mesh.meshing.uniforms.patterns, 0);
 		var colors: [16*4]f32 = [_]f32 {
 			1, 1, 0, 1,
 			0.8, 0.9, 0.1, 1,
