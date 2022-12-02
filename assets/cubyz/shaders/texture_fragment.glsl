@@ -49,22 +49,22 @@ float snoise(vec3 v){
 	vec3 x3 = x0 - 1. + 3.0*C.xxx;
 
 	// Get gradients:
-	ivec3 rand = random3to3((ivec3(i)));
-	vec3 p0 = vec3(rand & (1 << 30)-1)/(1 << 30)*2 - 1;
+	ivec3 rand = random3to3(ivec3(i));
+	vec3 p0 = vec3(rand);
 	
 	rand = random3to3((ivec3(i + i1)));
-	vec3 p1 = vec3(rand & (1 << 30)-1)/(1 << 30)*2 - 1;
+	vec3 p1 = vec3(rand);
 	
 	rand = random3to3((ivec3(i + i2)));
-	vec3 p2 = vec3(rand & (1 << 30)-1)/(1 << 30)*2 - 1;
+	vec3 p2 = vec3(rand);
 	
 	rand = random3to3((ivec3(i + 1)));
-	vec3 p3 = vec3(rand & (1 << 30)-1)/(1 << 30)*2 - 1;
+	vec3 p3 = vec3(rand);
 
 	// Mix final noise value
 	vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
 	m = m*m;
-	return 42.0*dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+	return 42.0*dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)))/(1 << 31);
 }
 
 vec4 getPattern(ivec3 texturePosition, int textureIndex) {
@@ -79,11 +79,12 @@ void main() {
 		paletteID += snoise(vec3(pixelPosition*float(1 << i)/40))/float(1 << i);
 	}
 	ivec3 rand = random3to3(ivec3(pixelPosition));
-	paletteID = (vec3(rand & (1 << 30)-1)/(1 << 30)*2.0 - 1).x*1.0;
+	//paletteID = (vec3(rand)/(1 << 31)).x*1.0;
 	//paletteID += snoise(vec3(pixelPosition*paletteID));
 	paletteID = paletteID*3 + 4;
 	//paletteID += 8*(1 - patternStrength);
 	int paletteIndex = int(paletteID);
 	frag_color = color[paletteIndex];
 	frag_color.rgb *= outNormalVariation;
+	//frag_color.rbg = vec3(rand)/(1 << 31)*0.5 + 0.5;
 }
