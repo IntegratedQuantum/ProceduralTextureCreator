@@ -51,7 +51,7 @@ pub const Neighbors = struct {
 /// Gets the index of a given position inside this chunk.
 fn getIndex(x: i32, y: i32, z: i32) u32 {
 	std.debug.assert((x & chunkMask) == x and (y & chunkMask) == y and (z & chunkMask) == z);
-	return (@intCast(u32, x) << chunkShift) | (@intCast(u32, y) << chunkShift2) | @intCast(u32, z);
+	return (@as(u32, @intCast(x)) << chunkShift) | (@as(u32, @intCast(y)) << chunkShift2) | @as(u32, @intCast(z));
 }
 
 pub const Chunk = struct {
@@ -77,7 +77,7 @@ pub const Chunk = struct {
 		x &= chunkMask;
 		y &= chunkMask;
 		z &= chunkMask;
-		for(Neighbors.relX) |_, i| {
+		for(0..Neighbors.neighbors) |i| {
 			var xi = x + Neighbors.relX[i];
 			var yi = y + Neighbors.relY[i];
 			var zi = z + Neighbors.relZ[i];
@@ -115,8 +115,8 @@ pub const meshing = struct {
 
 		var rawData: [6*3 << (3*chunkShift)]u32 = undefined; // 6 vertices per face, maximum 3 faces/block
 		const lut = [_]u32{0, 1, 2, 2, 1, 3};
-		for(rawData) |_, i| {
-			rawData[i] = @intCast(u32, i)/6*4 + lut[i%6];
+		for(0..rawData.len) |i| {
+			rawData[i] = @as(u32, @intCast(i))/6*4 + lut[i%6];
 		}
 
 		c.glGenVertexArrays(1, &vao);
@@ -140,9 +140,10 @@ pub const meshing = struct {
 	pub fn bindShaderAndUniforms(projMatrix: Mat4f) void {
 		shader.bind();
 
-		c.glUniformMatrix4fv(uniforms.projectionMatrix, 1, c.GL_FALSE, @ptrCast([*c]const f32, &projMatrix));
+		c.glUniformMatrix4fv(uniforms.projectionMatrix, 1, c.GL_FALSE, @ptrCast(&projMatrix));
 
-		c.glUniformMatrix4fv(uniforms.viewMatrix, 1, c.GL_FALSE, @ptrCast([*c]f32, &main.camera.viewMatrix));
+		std.log.info("Here i t :{}", .{uniforms.viewMatrix});
+		c.glUniformMatrix4fv(uniforms.viewMatrix, 1, c.GL_FALSE, @as([*c] f32, @ptrCast(&main.camera.viewMatrix)));
 
 		c.glBindVertexArray(vao);
 	}
@@ -169,9 +170,6 @@ pub const meshing = struct {
 		pub fn deinit(self: *ChunkMesh) void {
 			self.faceData.deinit();
 			self.faces.deinit();
-			if(self.chunk) |ch| {
-				self.allocator.destroy(ch);
-			}
 		}
 
 		fn canBeSeenThroughOtherBlock(block: Block, other: Block, neighbor: u3) bool {
@@ -201,7 +199,7 @@ pub const meshing = struct {
 							const neighborBlock = (&chunk.blocks)[getIndex(x2, y2, z2)]; // ← a temporary fix to a compiler performance bug. TODO: check if this was fixed.
 							if(canBeSeenThroughOtherBlock(block, neighborBlock, i)) {
 								const normal: u32 = i;
-								const position: u32 = @intCast(u32, x2) | @intCast(u32, y2)<<5 | @intCast(u32, z2)<<10;
+								const position: u32 = @as(u32, @intCast(x2)) | @as(u32, @intCast(y2))<<5 | @as(u32, @intCast(z2))<<10;
 								const textureNormal = normal<<24;
 								try self.faces.append(position);
 								try self.faces.append(textureNormal);
@@ -215,15 +213,15 @@ pub const meshing = struct {
 				self.allocator.destroy(oldChunk);
 			}
 			self.chunk = chunk;
-			self.coreCount = @intCast(u31, self.faces.items.len);
+			self.coreCount = @intCast(self.faces.items.len);
 			self.neighborStart = [_]u31{self.coreCount} ** 7;
 		}
 
 		pub fn uploadDataAndFinishNeighbors(self: *ChunkMesh) !void {
 			if(self.chunk == null) return; // In the mean-time the mesh was discarded and recreated and all the data was lost.
 			self.faces.shrinkRetainingCapacity(self.coreCount);
-			self.neighborStart[6] = @intCast(u31, self.faces.items.len);
-			self.vertexCount = @intCast(u31, 6*(self.faces.items.len)/2);
+			self.neighborStart[6] = @intCast(self.faces.items.len);
+			self.vertexCount = @intCast(6*(self.faces.items.len)/2);
 			self.faceData.bufferData(u32, self.faces.items);
 			self.generated = true;
 		}

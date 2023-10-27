@@ -30,7 +30,7 @@ pub const Draw = struct {
 	var clip: ?Vec4i = null;
 
 	pub fn setColor(newColor: u32) void {
-		color = @bitCast(i32, newColor);
+		color = @bitCast(newColor);
 	}
 
 	/// Returns the previous clip.
@@ -110,7 +110,7 @@ pub const Draw = struct {
 	pub fn rect(pos: Vec2f, dim: Vec2f) void {
 		rectShader.bind();
 
-		c.glUniform2f(rectUniforms.screen, @intToFloat(f32, Window.width), @intToFloat(f32, Window.height));
+		c.glUniform2f(rectUniforms.screen, @floatFromInt(Window.width), @floatFromInt(Window.height));
 		c.glUniform2f(rectUniforms.start, pos.x, pos.y);
 		c.glUniform2f(rectUniforms.size, dim.x, dim.y);
 		c.glUniform1i(rectUniforms.rectColor, color);
@@ -157,7 +157,7 @@ pub const Draw = struct {
 	pub fn line(pos1: Vec2f, pos2: Vec2f) void {
 		lineShader.bind();
 
-		c.glUniform2f(lineUniforms.screen, @intToFloat(f32, Window.width), @intToFloat(f32, Window.height));
+		c.glUniform2f(lineUniforms.screen, @floatFromInt(Window.width), @floatFromInt(Window.height));
 		c.glUniform2f(lineUniforms.start, pos1.x, pos1.y);
 		c.glUniform2f(lineUniforms.direction, pos2.x - pos1.x, pos2.y - pos1.y);
 		c.glUniform1i(lineUniforms.lineColor, color);
@@ -197,7 +197,7 @@ pub const Draw = struct {
 	pub fn rectOutline(pos: Vec2f, dim: Vec2f) void {
 		lineShader.bind();
 
-		c.glUniform2f(lineUniforms.screen, @intToFloat(f32, Window.width), @intToFloat(f32, Window.height));
+		c.glUniform2f(lineUniforms.screen, @floatFromInt(Window.width), @floatFromInt(Window.height));
 		c.glUniform2f(lineUniforms.start, pos.x, pos.y); // Move the coordinates, so they are in the center of a pixel.
 		c.glUniform2f(lineUniforms.direction, dim.x - 1, dim.y - 1); // The height is a lot smaller because the inner edge of the rect is drawn.
 		c.glUniform1i(lineUniforms.lineColor, color);
@@ -246,7 +246,7 @@ pub const Draw = struct {
 	pub fn circle(center: Vec2f, radius: f32) void {
 		circleShader.bind();
 
-		c.glUniform2f(circleUniforms.screen, @intToFloat(f32, Window.width), @intToFloat(f32, Window.height));
+		c.glUniform2f(circleUniforms.screen, @floatFromInt(Window.width), @floatFromInt(Window.height));
 		c.glUniform2f(circleUniforms.center, center.x, center.y); // Move the coordinates, so they are in the center of a pixel.
 		c.glUniform1f(circleUniforms.radius, radius); // The height is a lot smaller because the inner edge of the rect is drawn.
 		c.glUniform1i(circleUniforms.circleColor, color);
@@ -279,7 +279,7 @@ pub const Draw = struct {
 	pub fn boundImage(pos: Vec2f, dim: Vec2f) void {
 		imageShader.bind();
 
-		c.glUniform2f(imageUniforms.screen, @intToFloat(f32, Window.width), @intToFloat(f32, Window.height));
+		c.glUniform2f(imageUniforms.screen, @floatFromInt(Window.width), @floatFromInt(Window.height));
 		c.glUniform2f(imageUniforms.start, pos.x, pos.y);
 		c.glUniform2f(imageUniforms.size, dim.x, dim.y);
 		c.glUniform1i(imageUniforms.color, color);
@@ -337,12 +337,12 @@ pub const Shader = struct {
 			return err;
 		};
 		defer main.threadAllocator.free(source);
-		const ref_buffer = [_] [*c]u8 {@ptrCast([*c]u8, source.ptr)};
+		const ref_buffer = [_] [*c]u8 {@ptrCast(source.ptr)};
 		const shader = c.glCreateShader(shader_stage);
 		defer c.glDeleteShader(shader);
 		
-		var sourceLen: c_int = @intCast(c_int, source.len);
-		c.glShaderSource(shader, 1, @ptrCast([*c]const [*c]const u8, &ref_buffer[0]), &sourceLen);
+		var sourceLen: c_int = @intCast(source.len);
+		c.glShaderSource(shader, 1, @ptrCast(&ref_buffer[0]), &sourceLen);
 		
 		c.glCompileShader(shader);
 
@@ -350,9 +350,9 @@ pub const Shader = struct {
 		c.glGetShaderiv(shader, c.GL_COMPILE_STATUS, &success);
 		if(success != c.GL_TRUE) {
 			var len: u32 = undefined;
-			c.glGetShaderiv(shader, c.GL_INFO_LOG_LENGTH, @ptrCast(*c_int, &len));
+			c.glGetShaderiv(shader, c.GL_INFO_LOG_LENGTH, @ptrCast(&len));
 			var buf: [4096] u8 = undefined;
-			c.glGetShaderInfoLog(shader, 4096, @ptrCast(*c_int, &len), &buf);
+			c.glGetShaderInfoLog(shader, 4096, @ptrCast(&len), &buf);
 			std.log.err("Error compiling shader {s}:\n{s}\n", .{filename, buf[0..len]});
 			return error.FailedCompiling;
 		}
@@ -367,9 +367,9 @@ pub const Shader = struct {
 		c.glGetProgramiv(self.id, c.GL_LINK_STATUS, &success);
 		if(success != c.GL_TRUE) {
 			var len: u32 = undefined;
-			c.glGetProgramiv(self.id, c.GL_INFO_LOG_LENGTH, @ptrCast(*c_int, &len));
+			c.glGetProgramiv(self.id, c.GL_INFO_LOG_LENGTH, @ptrCast(&len));
 			var buf: [4096] u8 = undefined;
-			c.glGetProgramInfoLog(self.id, 4096, @ptrCast(*c_int, &len), &buf);
+			c.glGetProgramInfoLog(self.id, 4096, @ptrCast(&len), &buf);
 			std.log.err("Error Linking Shader program:\n{s}\n", .{buf[0..len]});
 			return error.FailedLinking;
 		}
@@ -386,8 +386,8 @@ pub const Shader = struct {
 	pub fn bulkGetUniformLocation(self: *const Shader, comptime T: type) T {
 		var ret: T = undefined;
 		inline for(@typeInfo(T).Struct.fields) |field| {
-			if(field.field_type == c_int) {
-				@field(ret, field.name) = c.glGetUniformLocation(self.id, field.name[0..]);
+			if(field.type == c_int) {
+				@field(ret, field.name) = c.glGetUniformLocation(self.id, field.name[0..] ++ "");
 			}
 		}
 		return ret;
@@ -420,7 +420,7 @@ pub const SSBO = struct {
 
 	pub fn bufferData(self: SSBO, comptime T: type, data: []T) void {
 		c.glBindBuffer(c.GL_SHADER_STORAGE_BUFFER, self.bufferID);
-		c.glBufferData(c.GL_SHADER_STORAGE_BUFFER, @intCast(c_long, data.len*@sizeOf(T)), data.ptr, c.GL_STATIC_DRAW);
+		c.glBufferData(c.GL_SHADER_STORAGE_BUFFER, @intCast(data.len*@sizeOf(T)), data.ptr, c.GL_STATIC_DRAW);
 		c.glBindBuffer(c.GL_SHADER_STORAGE_BUFFER, 0);
 	}
 };
@@ -447,7 +447,7 @@ pub const TextureArray = struct {
 		var g: [4]u32 = undefined;
 		var b: [4]u32 = undefined;
 		var a: [4]u32 = undefined;
-		for(colors) |_, i| {
+		for(0..colors.len) |i| {
 			r[i] = colors[i].r;
 			g[i] = colors[i].g;
 			b[i] = colors[i].b;
@@ -458,13 +458,13 @@ pub const TextureArray = struct {
 		var rSum: u32 = 0;
 		var gSum: u32 = 0;
 		var bSum: u32 = 0;
-		for(colors) |_, i| {
+		for(0..colors.len) |i| {
 			aSum += a[i]*a[i];
 			rSum += r[i]*r[i];
 			gSum += g[i]*g[i];
 			bSum += b[i]*b[i];
 		}
-		aSum = @floatToInt(u32, @round(@sqrt(@intToFloat(f32, aSum)))/2);
+		aSum = @intFromFloat(@round(@sqrt(@as(f32, @floatFromInt(aSum))))/2);
 		if(!isTransparent) {
 			if(aSum < 128) {
 				aSum = 0;
@@ -472,10 +472,10 @@ pub const TextureArray = struct {
 				aSum = 255;
 			}
 		}
-		rSum = @floatToInt(u32, @round(@sqrt(@intToFloat(f32, rSum)))/2);
-		gSum = @floatToInt(u32, @round(@sqrt(@intToFloat(f32, gSum)))/2);
-		bSum = @floatToInt(u32, @round(@sqrt(@intToFloat(f32, bSum)))/2);
-		return Color{.r=@intCast(u8, rSum), .g=@intCast(u8, gSum), .b=@intCast(u8, bSum), .a=@intCast(u8, aSum)};
+		rSum = @intFromFloat(@round(@sqrt(@as(f32, @floatFromInt(rSum))))/2);
+		gSum = @intFromFloat(@round(@sqrt(@as(f32, @floatFromInt(gSum))))/2);
+		bSum = @intFromFloat(@round(@sqrt(@as(f32, @floatFromInt(bSum))))/2);
+		return Color{.r=@intCast(rSum), .g=@intCast(gSum), .b=@intCast(bSum), .a=@intCast(aSum)};
 	}
 
 	/// (Re-)Generates the GPU buffer.
@@ -499,15 +499,15 @@ pub const TextureArray = struct {
 		self.bind();
 
 		const maxLOD = 1;// + std.math.log2_int(u31, @min(maxWidth, maxHeight));
-		c.glTexStorage3D(c.GL_TEXTURE_2D_ARRAY, maxLOD, c.GL_RGBA8, maxWidth, maxHeight, @intCast(c_int, images.len));
+		c.glTexStorage3D(c.GL_TEXTURE_2D_ARRAY, maxLOD, c.GL_RGBA8, maxWidth, maxHeight, @intCast(images.len));
 		var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
 		defer arena.deinit();
 		var lodBuffer: [][]Color = try arena.allocator().alloc([]Color, maxLOD);
-		for(lodBuffer) |*buffer, i| {
-			buffer.* = try arena.allocator().alloc(Color, (maxWidth >> @intCast(u5, i))*(maxHeight >> @intCast(u5, i)));
+		for(lodBuffer, 0..) |*buffer, i| {
+			buffer.* = try arena.allocator().alloc(Color, (maxWidth >> @intCast(i))*(maxHeight >> @intCast(i)));
 		}
 		
-		for(images) |image, i| {
+		for(images, 0..) |image, i| {
 			// Check if the image contains non-binary alpha values, which makes it transparent.
 			var isTransparent = false;
 			for(image.imageData) |color| {
@@ -529,8 +529,8 @@ pub const TextureArray = struct {
 			}
 
 			// Calculate the mipmap levels:
-			for(lodBuffer) |_, _lod| {
-				const lod = @intCast(u5, _lod);
+			for(0..lodBuffer.len) |_lod| {
+				const lod: u5 = @intCast(_lod);
 				const curWidth = maxWidth >> lod;
 				const curHeight = maxHeight >> lod;
 				if(lod != 0) {
@@ -550,7 +550,7 @@ pub const TextureArray = struct {
 						}
 					}
 				}
-				c.glTexSubImage3D(c.GL_TEXTURE_2D_ARRAY, lod, 0, 0, @intCast(c_int, i), curWidth, curHeight, 1, c.GL_RGBA, c.GL_UNSIGNED_BYTE, lodBuffer[lod].ptr);
+				c.glTexSubImage3D(c.GL_TEXTURE_2D_ARRAY, lod, 0, 0, @intCast(i), curWidth, curHeight, 1, c.GL_RGBA, c.GL_UNSIGNED_BYTE, lodBuffer[lod].ptr);
 			}
 		}
 		c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MAX_LOD, maxLOD);
@@ -579,10 +579,10 @@ pub const Image = struct {
 		var channel: c_int = undefined;
 		const nullTerminatedPath = try std.fmt.allocPrintZ(main.threadAllocator, "{s}", .{path}); // TODO: Find a more zig-friendly image loading library.
 		defer main.threadAllocator.free(nullTerminatedPath);
-		const data = stb_image.stbi_load(nullTerminatedPath.ptr, @ptrCast([*c]c_int, &result.width), @ptrCast([*c]c_int, &result.height), &channel, 4) orelse {
+		const data = stb_image.stbi_load(nullTerminatedPath.ptr, @ptrCast(&result.width), @ptrCast(&result.height), &channel, 4) orelse {
 			return error.FileNotFound;
 		};
-		result.imageData = try allocator.dupe(Color, @ptrCast([*]Color, data)[0..result.width*result.height]);
+		result.imageData = try allocator.dupe(Color, @as([*]Color, @ptrCast(data))[0..result.width*result.height]);
 		stb_image.stbi_image_free(data);
 		return result;
 	}
