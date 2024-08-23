@@ -82,7 +82,7 @@ void main() {
 	//paletteID = (vec3(rand)/(1 << 31)).x*1.0;
 	//paletteID += snoise(vec3(pixelPosition*paletteID));
 	paletteID = paletteID*3 + 4;
-	//paletteID += 8*(1 - patternStrength);
+	paletteID += 8*(1 - patternStrength);
 	int paletteIndex = int(paletteID);
 	frag_color = color[paletteIndex];
 	frag_color.rgb *= outNormalVariation;

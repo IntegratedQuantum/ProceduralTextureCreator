@@ -134,7 +134,7 @@ pub const Window = struct {
 			width = @intCast(newWidth);
 			height = @intCast(newHeight);
 			c.glViewport(0, 0, width, height);
-			camera.projectionMatrix = Mat4f.perspective(std.math.degreesToRadians(f32, fov), @as(f32, @floatFromInt(width))/@as(f32, @floatFromInt(height)), zNear, zFar);
+			camera.projectionMatrix = Mat4f.perspective(std.math.degreesToRadians(fov), @as(f32, @floatFromInt(width))/@as(f32, @floatFromInt(height)), zNear, zFar);
 		}
 		// Mouse deltas are averaged over multiple frames using a circular buffer:
 		const deltasLen: u2 = 3;
@@ -249,7 +249,7 @@ pub fn main() !void {
 	var gpa = std.heap.GeneralPurposeAllocator(.{.thread_safe=false}){};
 	threadAllocator = gpa.allocator();
 	defer if(gpa.deinit() == .leak) {
-		@panic("Memory leak");
+		std.log.err("Memory leak", .{});
 	};
 
 	try Window.init();

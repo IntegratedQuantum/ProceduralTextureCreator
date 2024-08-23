@@ -78,9 +78,9 @@ pub const Chunk = struct {
 		y &= chunkMask;
 		z &= chunkMask;
 		for(0..Neighbors.neighbors) |i| {
-			var xi = x + Neighbors.relX[i];
-			var yi = y + Neighbors.relY[i];
-			var zi = z + Neighbors.relZ[i];
+			const xi = x + Neighbors.relX[i];
+			const yi = y + Neighbors.relY[i];
+			const zi = z + Neighbors.relZ[i];
 			if (xi == (xi & chunkMask) and yi == (yi & chunkMask) and zi == (zi & chunkMask)) { // Simple double-bound test for coordinates.
 				neighborsArray[i] = self.getBlock(xi, yi, zi);
 			} else {
@@ -142,8 +142,7 @@ pub const meshing = struct {
 
 		c.glUniformMatrix4fv(uniforms.projectionMatrix, 1, c.GL_FALSE, @ptrCast(&projMatrix));
 
-		std.log.info("Here i t :{}", .{uniforms.viewMatrix});
-		c.glUniformMatrix4fv(uniforms.viewMatrix, 1, c.GL_FALSE, @as([*c] f32, @ptrCast(&main.camera.viewMatrix)));
+		c.glUniformMatrix4fv(uniforms.viewMatrix, 1, c.GL_FALSE, @ptrCast(&main.camera.viewMatrix));
 
 		c.glBindVertexArray(vao);
 	}
