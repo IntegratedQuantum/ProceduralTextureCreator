@@ -131,10 +131,10 @@ pub const Window = struct {
 		}
 		fn framebufferSize(_: ?*c.GLFWwindow, newWidth: c_int, newHeight: c_int) callconv(.C) void {
 			std.log.info("Framebuffer: {}, {}", .{newWidth, newHeight});
-			width = @intCast(u31, newWidth);
-			height = @intCast(u31, newHeight);
+			width = @intCast(newWidth);
+			height = @intCast(newHeight);
 			c.glViewport(0, 0, width, height);
-			camera.projectionMatrix = Mat4f.perspective(std.math.degreesToRadians(f32, fov), @intToFloat(f32, width)/@intToFloat(f32, height), zNear, zFar);
+			camera.projectionMatrix = Mat4f.perspective(std.math.degreesToRadians(fov), @as(f32, @floatFromInt(width))/@as(f32, @floatFromInt(height)), zNear, zFar);
 		}
 		// Mouse deltas are averaged over multiple frames using a circular buffer:
 		const deltasLen: u2 = 3;
@@ -144,8 +144,8 @@ pub const Window = struct {
 		var ignoreDataAfterRecentGrab: bool = true;
 		fn cursorPosition(_: ?*c.GLFWwindow, x: f64, y: f64) callconv(.C) void {
 			const newPos = Vec2f {
-				.x = @floatCast(f32, x),
-				.y = @floatCast(f32, y),
+				.x = @floatCast(x),
+				.y = @floatCast(y),
 			};
 			if(grabbed and !ignoreDataAfterRecentGrab) {
 				deltas[deltaBufferPosition].addEqual(newPos.sub(currentPos).mulScalar(settings.mouseSensitivity));
@@ -163,7 +163,7 @@ pub const Window = struct {
 		}
 		fn glDebugOutput(_: c_uint, typ: c_uint, _: c_uint, severity: c_uint, length: c_int, message: [*c]const u8, _: ?*const anyopaque) callconv(.C) void {
 			if(typ == c.GL_DEBUG_TYPE_ERROR or typ == c.GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR or typ == c.GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR or typ == c.GL_DEBUG_TYPE_PORTABILITY or typ == c.GL_DEBUG_TYPE_PERFORMANCE) {
-				std.log.err("OpenGL {}:{s}", .{severity, message[0..@intCast(usize, length)]});
+				std.log.err("OpenGL {}:{s}", .{severity, message[0..@intCast(length)]});
 				@panic("OpenGL error");
 			}
 		}
@@ -248,8 +248,8 @@ pub const Window = struct {
 pub fn main() !void {
 	var gpa = std.heap.GeneralPurposeAllocator(.{.thread_safe=false}){};
 	threadAllocator = gpa.allocator();
-	defer if(gpa.deinit()) {
-		@panic("Memory leak");
+	defer if(gpa.deinit() == .leak) {
+		std.log.err("Memory leak", .{});
 	};
 
 	try Window.init();
@@ -279,11 +279,11 @@ pub fn main() !void {
 
 	var chunk: mesh.Chunk = undefined;
 	chunk.init();
-	for([_]u0{0} ** 16) |_, x| {
-		for([_]u0{0} ** 16) |_, y| {
-			for([_]u0{0} ** 16) |_, z| {
+	for(0..16) |x| {
+		for(0..16) |y| {
+			for(0..16) |z| {
 				if(x >= y) {
-					chunk.addBlock(@intCast(u5, x), @intCast(u5, y), @intCast(u5, z));
+					chunk.addBlock(@intCast(x), @intCast(y), @intCast(z));
 				}
 			}
 		}
